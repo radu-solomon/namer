@@ -183,6 +183,11 @@ class NamerConfig:
     """
     Write an nfo file next to the directory in an emby/jellyfin readable format.
     """
+    
+    write_performer_poster: bool = False
+    """
+    Write performar images in the same folder as the show
+    """ 
 
     trailer_location: Optional[str] = ''
     """
