@@ -183,7 +183,7 @@ class NamerConfig:
     """
     Write an nfo file next to the directory in an emby/jellyfin readable format.
     """
-    
+
     write_performer_poster: bool = False
     """
     Write performar images in the same folder as the show
@@ -473,6 +473,7 @@ class NamerConfig:
             },
             "Tagging Config": {
                 "write_nfo": self.write_nfo,
+                "write_performer_poster": self.write_performer_poster,
                 "enabled_tagging": self.enabled_tagging,
                 "enabled_poster": self.enabled_poster,
                 "enable_metadataapi_genres": self.enable_metadataapi_genres,

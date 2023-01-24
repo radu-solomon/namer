@@ -235,6 +235,7 @@ field_info: Dict[str, Tuple[str, Optional[Callable[[Optional[str]], Any]], Optio
     "send_phash": ("Phash", to_bool, from_bool),
     "mark_collected": ("metadata", to_bool, from_bool),
     "write_nfo": ("metadata", to_bool, from_bool),
+    "write_performer_poster": ("metadata", to_bool, from_bool),
     "enabled_tagging": ("metadata", to_bool, from_bool),
     "enabled_poster": ("metadata", to_bool, from_bool),
     "enable_metadataapi_genres": ("metadata", to_bool, from_bool),
