@@ -159,6 +159,9 @@ enabled_tagging = True
 # Controls downloading of images for .nfo and mp4 tagging.
 enabled_poster = True
 
+# List of which images would be downloaded
+download_type = poster,background,performer
+
 # These genres are noisey and not recommend for use.  If this is false a single default
 # genre will be used.  These are called Tags on the porndb json response objects, genre's
 # in plex/jellyfin - and could be added as Tags to jellyfin.  Unfortunately jellyfin doesn't
@@ -249,6 +252,9 @@ add_max_percent_column = False
 
 # Set logger level to debug
 debug = False
+
+# Manual mode, successful matches will go to failed directory
+manual_mode = False
 
 # Errors may be raised by the program, and when they are loguru may be used to help explain them, showing 
 # values in the stack trace, potentially including the porndb token, this setting should only be turned on

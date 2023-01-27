@@ -71,8 +71,9 @@ def command_to_file_info(command: Command, config: NamerConfig) -> Dict:
     if config and config.add_max_percent_column and config.write_namer_failed_log and subpath:
         log_data = read_failed_log_file(subpath, config)
         if log_data and log_data.results:
-            percentage = max([100 - item.phash_distance * 2.5 if item.phash_distance is not None else item.name_match for item in log_data.results])
-    res['percentage'] = percentage
+            percentage = max([100 - item.phash_distance * 2.5 if item.phash_distance is not None and item.phash_distance <= 8 else item.name_match for item in log_data.results])
+
+    res['percentage'] = round(percentage, 2)
 
     return res
 
@@ -111,6 +112,7 @@ def get_search_results(query: str, search_type: SearchType, file: str, config: N
             'date': scene_data.date,
             'poster': scene_data.poster_url,
             'site': scene_data.site,
+            'network': scene_data.network,
             'tags_count': len(scene_data.tags),
             'performers': scene_data.performers,
         }
@@ -166,6 +168,9 @@ def _read_failed_log_file(file: Path, file_size: int, file_update: float) -> Opt
             for item in decoded.results:
                 if not hasattr(item, 'phash_distance'):
                     item.phash_distance = 0 if hasattr(item, 'phash_match') and getattr(item, 'phash_match') else None
+
+                if not hasattr(item, 'phash_duration'):
+                    item.phash_duration = None
 
                 if not hasattr(item.looked_up, 'hashes'):
                     item.looked_up.hashes = []

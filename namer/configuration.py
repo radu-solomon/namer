@@ -6,6 +6,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Pattern, Sequence
 from configupdater import ConfigUpdater
@@ -15,6 +16,12 @@ from requests_cache import CachedSession
 from namer.ffmpeg import FFMpeg
 from namer.videophash.videophash import VideoPerceptualHash
 from namer.videophash.videophashstash import StashVideoPerceptualHash
+
+
+class ImageDownloadType(str, Enum):
+    POSTER = 'poster'
+    BACKGROUND = 'background'
+    PERFORMER = 'performer'
 
 
 # noinspection PyDataclass
@@ -265,6 +272,11 @@ class NamerConfig:
     Only applicable if enabled_tagging is True
     """
 
+    download_type: List[str]
+    """
+    List of which images would be downloaded
+    """
+
     enable_metadataapi_genres: bool = False
     """
     Should genres pulled from the porndb be added to the file?   These genres are noisy and
@@ -398,6 +410,11 @@ class NamerConfig:
     Set logger level to debug
     """
 
+    manual_mode: bool = False
+    """
+    If True, successful matches will go to failed directory
+    """
+
     diagnose_errors: bool = False
     """
     Errors may be raised by the program, and when they are loguru may be used to help explain them, showing
@@ -476,6 +493,7 @@ class NamerConfig:
                 "write_performer_poster": self.write_performer_poster,
                 "enabled_tagging": self.enabled_tagging,
                 "enabled_poster": self.enabled_poster,
+                "download_type": self.download_type,
                 "enable_metadataapi_genres": self.enable_metadataapi_genres,
                 "default_genre": self.default_genre,
                 "language": self.language,
@@ -499,6 +517,7 @@ class NamerConfig:
                 "allow_delete_files": self.allow_delete_files,
                 "add_max_percent_column": self.add_max_percent_column,
                 "debug": self.debug,
+                "manual_mode": self.manual_mode,
                 "diagnose_errors": self.diagnose_errors,
             }
         }
