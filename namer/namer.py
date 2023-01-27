@@ -234,12 +234,12 @@ def add_extra_artifacts(video_file: Path, new_metadata: LookedUpFileInfo, search
     if config.write_nfo and config.enabled_poster and new_metadata:
         poster = get_image(new_metadata.poster_url, "-poster", video_file, config) if new_metadata.poster_url else None
         background = get_image(new_metadata.background_url, "-background", video_file, config) if new_metadata.background_url else None
-        if config.write_performer_poster:
-            for performer in new_metadata.performers:
-                if isinstance(performer.image, str):
-                    performer_image = get_image(performer.image, "-Performer-" + performer.name.replace(" ", "-") + "-image", video_file, config) if performer.image else None
-                    if performer_image:
-                        performer.image = performer_image
+        for performer in new_metadata.performers:
+            logger.info("Download Performer Image WPF: {}", config.write_performer_poster)
+            if config.write_performer_poster and isinstance(performer.image, str):
+                performer_image = get_image(performer.image, "-Performer-" + performer.name.replace(" ", "-") + "-image", video_file, config) if performer.image else None
+                if performer_image:
+                    performer.image = performer_image
 
         write_nfo(video_file, new_metadata, config, trailer, poster, background, phash)
 
@@ -300,3 +300,4 @@ def main(arg_list: List[str]):
         command = make_command(target.absolute(), config, inplace=True, nfo=args.infos)
         if command is not None:
             process_file(command)
+            
