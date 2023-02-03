@@ -13,6 +13,7 @@ from configupdater import ConfigUpdater
 
 from requests_cache import CachedSession
 
+from namer import database
 from namer.ffmpeg import FFMpeg
 from namer.videophash.videophash import VideoPerceptualHash
 from namer.videophash.videophashstash import StashVideoPerceptualHash
@@ -311,6 +312,16 @@ class NamerConfig:
     Use alternative phash generator (might be faster, not 100% compatible)
     """
 
+    max_ffmpeg_workers: Optional[int] = None
+    """
+    Max ffmpeg processes for alternative phash generation, empty for auto select
+    """
+
+    use_gpu: Optional[bool] = False
+    """
+    Use gpu for alternative phash generation
+    """
+
     mark_collected: bool = False
     """
     Mark any matched video as "collected" in tpdb, allowing tpdb to keep track of videos you have collected.
@@ -425,11 +436,14 @@ class NamerConfig:
     ffmpeg: FFMpeg = FFMpeg()
     vph: VideoPerceptualHash = StashVideoPerceptualHash()
     vph_alt: VideoPerceptualHash = VideoPerceptualHash(ffmpeg)
+    re_cleanup: List[Pattern]
 
     def __init__(self):
         if sys.platform != "win32":
             self.set_uid = os.getuid()
             self.set_gid = os.getgid()
+
+        self.re_cleanup = [re.compile(fr'\b{regex}\b', re.IGNORECASE) for regex in database.re_cleanup]
 
     def __str__(self):
         config = self.to_dict()
@@ -480,6 +494,8 @@ class NamerConfig:
                 "search_phash": self.search_phash,
                 "send_phash": self.send_phash,
                 "use_alt_phash_tool": self.use_alt_phash_tool,
+                "max_ffmpeg_workers": self.max_ffmpeg_workers,
+                "use_gpu": self.use_gpu,
                 # "require_match_phash_top": self.require_match_phash_top,
                 # "send_phash_of_matches_to_tpdb": self.send_phash_of_matches_to_tpdb,
             },

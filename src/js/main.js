@@ -4,7 +4,6 @@ import {Popover, Modal} from 'bootstrap'
 import $ from 'jquery'
 import 'datatables.net-bs5'
 import {escape} from 'lodash'
-import hljs from 'highlight.js'
 
 import {Helpers} from './helpers'
 import './themes'
@@ -18,6 +17,7 @@ const logForm = $('#logFile .modal-body')
 const logFormTitle = $('#modalLogsLabel span')
 const searchForm = $('#searchForm')
 const searchButton = $('#searchForm .modal-footer .search')
+const phashButton = $('#searchForm .modal-footer .phash')
 const queryInput = $('#queryInput')
 const queryType = $('#queryType')
 const deleteFile = $('#deleteFile')
@@ -41,6 +41,25 @@ searchButton.on('click', function () {
     resultFormTitle.attr('title', title)
 
     Helpers.request('./api/v1/get_search', data, function (data) {
+        Helpers.render('searchResults', data, resultForm, function (selector) {
+            Helpers.initTooltips(selector)
+        })
+    })
+})
+
+phashButton.on('click', function () {
+    resultForm.html(Helpers.getProgressBar())
+
+    const data = {
+        'file': queryInput.data('file'),
+        'type': queryType.val(),
+    }
+
+    let title = escape(`(${data['file']})`)
+    resultFormTitle.html(title)
+    resultFormTitle.attr('title', title)
+
+    Helpers.request('./api/v1/get_phash', data, function (data) {
         Helpers.render('searchResults', data, resultForm, function (selector) {
             Helpers.initTooltips(selector)
         })
@@ -89,7 +108,9 @@ filesResult.on('click', '.delete', function () {
 
 refreshFiles.on('click', function () {
     Helpers.refreshFiles(filesResult, $(this).data('target'))
-    updateQueueSize()
+    if (queueSize) {
+        Helpers.updateQueueSize(queueSize)
+    }
 })
 
 searchForm.on('shown.bs.modal', function () {
@@ -121,7 +142,6 @@ function rename() {
 }
 
 Helpers.setTableSort(filesResult)
-hljs.highlightAll()
 
 if (queueSize) {
     Helpers.updateQueueSize(queueSize)
