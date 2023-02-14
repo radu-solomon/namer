@@ -103,7 +103,7 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         name = parse_file_name("BrazzersExxtra - 2021-12-07 - Dr. Polla & The Chronic Discharge Conundrum.mp4", sample_config())
         self.assertEqual(name.site, "BrazzersExxtra")
         self.assertEqual(name.date, "2021-12-07")
-        self.assertEqual(name.name, "Dr  Polla & The Chronic Discharge Conundrum")
+        self.assertEqual(name.name, "Dr Polla & The Chronic Discharge Conundrum")
         self.assertEqual(name.trans, False)
         self.assertEqual(name.extension, "mp4")
 
@@ -114,7 +114,7 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         name = parse_file_name("bex - 2021-12-07 - Dr. Polla & The Chronic Discharge Conundrum.mp4", sample_config())
         self.assertEqual(name.site, "BrazzersExxtra")
         self.assertEqual(name.date, "2021-12-07")
-        self.assertEqual(name.name, "Dr  Polla & The Chronic Discharge Conundrum")
+        self.assertEqual(name.name, "Dr Polla & The Chronic Discharge Conundrum")
         self.assertEqual(name.trans, False)
         self.assertEqual(name.extension, "mp4")
 
@@ -148,7 +148,7 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         with environment() as (tmpdir, _parrot, config):
             tempdir = Path(tmpdir)
             test_dir = Path(__file__).resolve().parent
-            target_file = (tempdir / "EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX" / "EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.mp4")
+            target_file = (tempdir / "EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.1080p.HEVC.x265.PRT[XvX]-xpost" / "EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.mp4")
             target_file.parent.mkdir()
             shutil.copy(test_dir / "Site.22.01.01.painful.pun.XXX.720p.xpost.mp4", target_file)
             config.min_file_size = 0

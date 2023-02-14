@@ -34,6 +34,8 @@ name_parser = {_site}{_sep}{_optional_date}{_ts}{_name}{_dot}{_ext}
 # * 'name' - the scene/movie name
 # * 'site' - the site or studio name, BrazzersExxtra, AllHerLuv, Deeper, etc with spaces removed.
 # * 'full_site' - the full site/studio name from porndb, unmodified, i.e: Brazzers Exxtra, All Her Luv, etc.
+# * 'network' - the network site or studio name, MindGeek, Vixen, etc with spaces removed.
+# * 'full_network' - the network full site/studio name from porndb, unmodified, i.e: Mind Geek, Vixen, etc.
 # * 'performers' - comma seperated list of female performers
 # * 'all_performers' - comma seperated list of all performers
 # * 'act' - an act, parsed from original file name, don't use.
@@ -48,7 +50,7 @@ name_parser = {_site}{_sep}{_optional_date}{_ts}{_name}{_dot}{_ext}
 # Also note that jinja2 filters are support:
 # https://jinja.palletsprojects.com/en/3.1.x/templates/#list-of-builtin-filters
 # Like {site:|lower} or {name:|title|replace(' ', '.'))}
-inplace_name={site} - {date} - {name}.{ext}
+inplace_name={full_site} - {date} - {name} [WEBDL-{resolution}].{ext}
 
 # If a directory name is to be preferred over a file name.
 # Directories are calculated by taking the first part of a relative path
@@ -165,7 +167,7 @@ enabled_tagging = True
 # Controls downloading of images for .nfo and mp4 tagging.
 enabled_poster = True
 
-# List of which images would be downloaded
+# List of which images would be downloaded options are: poster,background,performer
 download_type = poster,background,performer
 
 # These genres are noisey and not recommend for use.  If this is false a single default
@@ -218,7 +220,7 @@ extra_sleep_time = 30
 
 # Configured like inplace_name above, but with paths, and is relative to
 # dest_dir, which is where completed files will be moved to. 
-new_relative_path_name={site} - {date} - {name}/{site} - {date} - {name}.{ext}
+new_relative_path_name={full_site}/{full_site} - {date} - {name} [WEBDL-{resolution}].{ext}
 
 # director where new downloads go.
 watch_dir = ./test/watch

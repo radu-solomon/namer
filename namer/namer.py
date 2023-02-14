@@ -153,7 +153,6 @@ def process_file(command: Command) -> Optional[Command]:
     logger.info("Processing: {}", command.input_file)
     if command.target_movie_file is not None:
         phash: Optional[PerceptualHash] = None
-        matched: Optional[ComparisonResult] = None
         new_metadata: Optional[LookedUpFileInfo] = None
         search_results: ComparisonResults = ComparisonResults([])
         # Match to nfo files, if enabled and found.
@@ -203,7 +202,7 @@ def process_file(command: Command) -> Optional[Command]:
                     new_metadata.resolution = ffprobe_results.get_resolution()
 
                 if command.config.send_phash:
-                    phash = calculate_phash(command.target_movie_file, command.config) if not phash else phash
+                    phash = phash if phash else calculate_phash(command.target_movie_file, command.config)
                     if phash:
                         scene_hash = SceneHash(str(phash.phash), HashType.PHASH, phash.duration)
                         share_hash(new_metadata, scene_hash, command.config)
@@ -282,7 +281,7 @@ def check_arguments(file_to_process: Path, dir_to_process: Path, config_override
 
 def calculate_phash(file: Path, config: NamerConfig) -> Optional[PerceptualHash]:
     vph = config.vph_alt if config.use_alt_phash_tool else config.vph
-    phash = vph.get_hashes(file, max_workers=config.max_ffmpeg_workers, use_gpu=config.use_gpu)
+    phash = vph.get_hashes(file, max_workers=config.max_ffmpeg_workers, use_gpu=config.use_gpu if config.use_gpu else False)
 
     return phash
 
