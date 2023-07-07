@@ -21,7 +21,7 @@ from namer.configuration_utils import default_config, verify_configuration
 from namer.command import make_command, move_command_files, move_to_final_location, set_permissions, write_log_file
 from namer.ffmpeg import FFProbeResults
 from namer.fileinfo import FileInfo
-from namer.metadataapi import get_complete_metadataapi_net_fileinfo, get_image, get_trailer, match, share_hash, toggle_collected
+from namer.metadataapi import get_complete_metadataapi_net_fileinfo, get_image, get_trailer, match, share_oshash, share_phash, toggle_collected
 from namer.moviexml import parse_movie_xml_file, write_nfo
 from namer.name_formatter import PartialFormatter
 from namer.mutagen import update_mp4_file
@@ -244,7 +244,8 @@ def add_extra_artifacts(video_file: Path, new_metadata: LookedUpFileInfo, search
         poster = get_image(new_metadata.poster_url, "-poster", video_file, config) if new_metadata.poster_url and config.enabled_poster and ImageDownloadType.POSTER in config.download_type else None
         background = get_image(new_metadata.background_url, "-background", video_file, config) if new_metadata.background_url and config.enabled_poster and ImageDownloadType.BACKGROUND in config.download_type else None
         for performer in new_metadata.performers:
-            if isinstance(performer.image, str):
+            logger.info("Download Performer Image WPF: {}", config.write_performer_poster)
+            if config.write_performer_poster and isinstance(performer.image, str):
                 performer_image = get_image(performer.image, "-Performer-" + performer.name.replace(" ", "-") + "-image", video_file, config) if performer.image and config.enabled_poster and ImageDownloadType.PERFORMER in config.download_type else None
                 if performer_image:
                     performer.image = performer_image
@@ -315,3 +316,4 @@ def main(arg_list: List[str]):
         command = make_command(target.absolute(), config, inplace=True, nfo=args.infos)
         if command is not None:
             process_file(command)
+            

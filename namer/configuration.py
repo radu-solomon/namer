@@ -194,6 +194,11 @@ class NamerConfig:
     Write an nfo file next to the directory in an emby/jellyfin readable format.
     """
 
+    write_performer_poster: bool = False
+    """
+    Write performar images in the same folder as the show
+    """ 
+
     trailer_location: Optional[str] = ''
     """
     If you want the trailers downloaded set the value relative to the final location of the movie file here.
@@ -503,6 +508,7 @@ class NamerConfig:
             },
             "Tagging Config": {
                 "write_nfo": self.write_nfo,
+                "write_performer_poster": self.write_performer_poster,
                 "enabled_tagging": self.enabled_tagging,
                 "enabled_poster": self.enabled_poster,
                 "download_type": self.download_type,

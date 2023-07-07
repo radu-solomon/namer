@@ -156,6 +156,9 @@ use_gpu = False
 #  Write an nfo file next to the directory in an emby/jellyfin readable format
 write_nfo = False
 
+#  Write performar images in the same folder as the show
+write_performer_poster = False
+
 # Should metadata fetched from the porn db be written in to the metadata of the mp4.
 enabled_tagging = True
 

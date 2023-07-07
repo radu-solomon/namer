@@ -120,8 +120,8 @@ def write_movie_xml_file(info: LookedUpFileInfo, config: NamerConfig, trailer: O
         add_sub_element(doc, root, 'genre', config.default_genre)
 
     add_sub_element(doc, root, 'studio', info.site)
-    add_sub_element(doc, root, 'theporndbid', str(info.uuid))
-    add_sub_element(doc, root, 'theporndbguid', str(info.guid))
+    add_sub_element(doc, root, 'theporndbid', str(info.uuid).strip('scene/'))
+    add_sub_element(doc, root, 'theporndbguid', str(info.uuid).strip('scene/'))
     add_sub_element(doc, root, 'phoenixadultid')
     add_sub_element(doc, root, 'phoenixadulturlid')
 
@@ -133,8 +133,8 @@ def write_movie_xml_file(info: LookedUpFileInfo, config: NamerConfig, trailer: O
         add_sub_element(doc, actor, 'type', 'Actor')
         add_sub_element(doc, actor, 'name', performer.name)
         add_sub_element(doc, actor, 'role', performer.role)
-
-        if performer.image:
+        
+        if config.write_performer_poster and performer.image:
             image = performer.image.name if isinstance(performer.image, Path) else performer.image
             add_sub_element(doc, actor, 'image', image)
 
