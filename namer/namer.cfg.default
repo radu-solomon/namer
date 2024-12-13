@@ -1,7 +1,7 @@
 [namer]
 
 # token to access porndb.
-# sign up here: https://metadataapi.net/register
+# sign up here: https://theporndb.net/register
 porndb_token = ****************************************
 
 # You should likely never edit this, unless you know regex really well and wont ask for help when you mess up.
@@ -34,12 +34,17 @@ name_parser = {_site}{_sep}{_optional_date}{_ts}{_name}{_dot}{_ext}
 # * 'name' - the scene/movie name
 # * 'site' - the site or studio name, BrazzersExxtra, AllHerLuv, Deeper, etc with spaces removed.
 # * 'full_site' - the full site/studio name from porndb, unmodified, i.e: Brazzers Exxtra, All Her Luv, etc.
+# * 'parent' - the parent site/studio name from porndb, unmodified, i.e: Brazzers, etc.
+# * 'full_parent' - the parent full site/studio name from porndb, unmodified, i.e: Brazzers, Vixen, etc.
 # * 'network' - the network site or studio name, MindGeek, Vixen, etc with spaces removed.
 # * 'full_network' - the network full site/studio name from porndb, unmodified, i.e: Mind Geek, Vixen, etc.
 # * 'performers' - comma seperated list of female performers
 # * 'all_performers' - comma seperated list of all performers
 # * 'act' - an act, parsed from original file name, don't use.
 # * 'ext' - original file's extension, you should keep this.
+# * 'source_file_name' - original file name
+# * 'video_codec' - video codec of file, like h264
+# * 'audio_codec' - audio codec of file, like acc
 # * 'trans' - 'TS', or 'ts' if detected in original file name.
 # * 'type' - "movie" or "scene" depending on tpdb api used to find the metadata (/scenes or /movies)
 # * 'resolution' - 480p, 720p, 1080p, 4k, or any other integer
@@ -120,6 +125,15 @@ max_performer_names = 6
 # When plex hack is set to True, any matches of e##s## are removed from the Scene name.
 plex_hack = False
 
+# Cleanup final filename
+path_cleanup = False
+
+# Path where stores namer system data.
+database_path = ./database
+
+# use namer database.
+use_database = False
+
 # Cache http requests
 use_requests_cache = True
 
@@ -128,6 +142,11 @@ requests_cache_expire_minutes = 10
 
 # Leave this unset unless you are testing a new tpdb endpoint.
 override_tpdb_address =
+
+# Without modify the enconding where possible covert container (aka file types) to this
+# desired container type ("mp4", "mkv", "avi", ect), plugged in to the command:
+# "ffmpeg -i input.mkv -c copy output.<type>"
+convert_container_to =
 
 [Phash]
 # Calculate and use phashes in search for matches
@@ -157,15 +176,18 @@ use_gpu = False
 write_nfo = False
 
 # Should metadata fetched from the porn db be written in to the metadata of the mp4.
-enabled_tagging = True
+enabled_tagging = False
 
 # Should the poster fetched from the porn db be written in to the metadata of the mp4.
 # This poster will be displayed in Plex, Jellyfin and Apple TV app.
 # Controls downloading of images for .nfo and mp4 tagging.
-enabled_poster = True
+enabled_poster = False
 
 # List of which images would be downloaded options are: poster,background,performer
 download_type = poster,background,performer
+
+# Downloaded images format: png or jpeg
+image_format = png
 
 # These genres are noisey and not recommend for use.  If this is false a single default
 # genre will be used.  These are called Tags on the porndb json response objects, genre's
@@ -215,6 +237,12 @@ del_other_files = False
 # with no movies of you have del_other_files set to True.
 extra_sleep_time = 30
 
+# Maximum amount of items in queue
+queue_limit = 0
+
+# Sleep time between queue size check
+queue_sleep_time = 5
+
 # Configured like inplace_name above, but with paths, and is relative to
 # dest_dir, which is where completed files will be moved to.
 new_relative_path_name={full_site}/{full_site} - {date} - {name} [WEBDL-{resolution}].{ext}
@@ -252,11 +280,17 @@ web_root =
 # Allow to delete files in web interface
 allow_delete_files = False
 
-# Add maximal percent from failed log to table in web interface
-add_max_percent_column = False
+# Add columns from failed log to table in web interface
+add_columns_from_log = False
+
+# Add creation date from failed log to table in web interface
+add_complete_column = False
 
 # Set logger level to debug
 debug = False
+
+# Set logger output format
+console_format = <green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level.icon} {level: <8}</level> | {message}
 
 # Manual mode, successful matches will go to failed directory
 manual_mode = False

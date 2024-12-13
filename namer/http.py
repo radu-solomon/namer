@@ -16,12 +16,12 @@ class RequestType(Enum):
 class Http:  # noqa: PIE798
     @staticmethod
     def request(method: RequestType, url, **kwargs):
-        logger.info(f'Requesting {method.value} "{url}"')
+        logger.debug(f'Requesting {method.value} "{url}"')
         cache_session: Optional[CachedSession] = kwargs.get('cache_session')
         if 'cache_session' in kwargs:
             del kwargs['cache_session']
 
-        if kwargs.get("stream", False) or not isinstance(cache_session, CachedSession):
+        if kwargs.get('stream', False) or not isinstance(cache_session, CachedSession):
             return requests.request(method.value, url, **kwargs)
         else:
             return cache_session.request(method.value, url, **kwargs)

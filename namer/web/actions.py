@@ -18,8 +18,10 @@ from werkzeug.routing import Rule
 from namer.comparison_results import ComparisonResults, SceneType
 from namer.configuration import NamerConfig
 from namer.command import gather_target_files_from_dir, is_interesting_movie, is_relative_to, Command
-from namer.metadataapi import __build_url, __request_response_json_object, __metadataapi_response_to_data  # type: ignore
+from namer.fileinfo import FileInfo, parse_file_name
+from namer.metadataapi import __build_url, __evaluate_match, __request_response_json_object, __metadataapi_response_to_data
 from namer.namer import calculate_phash
+from namer.videophash import PerceptualHash
 
 
 class SearchType(str, Enum):
@@ -59,47 +61,75 @@ def get_queue_size(queue: Queue) -> int:
 
 def command_to_file_info(command: Command, config: NamerConfig) -> Dict:
     stat = command.target_movie_file.stat()
-    subpath = str(command.target_movie_file.absolute().relative_to(command.config.failed_dir.absolute())) if is_relative_to(command.target_movie_file, command.config.failed_dir) else None
+
+    sub_path = str(command.target_movie_file.absolute().relative_to(command.config.failed_dir.absolute())) if is_relative_to(command.target_movie_file, command.config.failed_dir) else None
     res = {
-        'file': subpath,
+        'file': sub_path,
         'name': command.target_directory.stem if command.parsed_dir_name and command.target_directory else command.target_movie_file.stem,
         'ext': command.target_movie_file.suffix[1:].upper(),
         'update_time': int(stat.st_mtime),
         'size': stat.st_size,
     }
 
-    percentage = 0.0
-    if config and config.add_max_percent_column and config.write_namer_failed_log and subpath:
-        log_data = read_failed_log_file(subpath, config)
-        if log_data and log_data.results:
-            percentage = max([100 - item.phash_distance * 2.5 if item.phash_distance is not None and item.phash_distance <= 8 else item.name_match for item in log_data.results])
+    percentage, phash, oshash = 0.0, '', ''
+    if config and config.write_namer_failed_log and config.add_columns_from_log and sub_path:
+        log_data = read_failed_log_file(sub_path, config)
+        if log_data:
+            if log_data.results:
+                percentage = max([100 - item.phash_distance * 2.5 if item.phash_distance is not None and item.phash_distance <= 8 else item.name_match for item in log_data.results])
+
+            if log_data.fileinfo and log_data.fileinfo.hashes:
+                phash = str(log_data.fileinfo.hashes.phash)
+                oshash = log_data.fileinfo.hashes.oshash
 
     res['percentage'] = percentage
+    res['phash'] = phash
+    res['oshash'] = oshash
+
+    log_time = 0
+    if config and config.add_complete_column and config.write_namer_failed_log and sub_path:
+        log_file = command.target_movie_file.parent / (command.target_movie_file.stem + '_namer.json.gz')
+        if log_file.is_file():
+            log_stat = log_file.stat()
+            log_time = int(log_stat.st_ctime)
+
+    res['log_time'] = log_time
 
     return res
 
 
-def metadataapi_responses_to_webui_response(responses: Dict, config: NamerConfig) -> List:
+def metadataapi_responses_to_webui_response(responses: Dict, config: NamerConfig, file: str, phash: Optional[PerceptualHash] = None) -> List:
+    file = Path(file)
+    file_name = file.stem
+    if not file.suffix and config.target_extensions:
+        file_name += '.' + config.target_extensions[0]
+
     file_infos = []
     for url, response in responses.items():
         if response and response.strip() != '':
             json_obj = json.loads(response, object_hook=lambda d: SimpleNamespace(**d))
             formatted = json.dumps(json.loads(response), indent=4, sort_keys=True)
-            file_infos.extend(__metadataapi_response_to_data(json_obj, url, formatted, None, config))
+            name_parts = parse_file_name(file_name, config)
+            file_infos.extend(__metadataapi_response_to_data(json_obj, url, formatted, name_parts, config))
 
     files = []
     for scene_data in file_infos:
-        scene = {
-            'id': scene_data.uuid,
-            'type': scene_data.type.value,
-            'title': scene_data.name,
-            'date': scene_data.date,
-            'poster': scene_data.poster_url,
-            'site': scene_data.site,
-            'network': scene_data.network,
-            'tags_count': len(scene_data.tags),
-            'performers': scene_data.performers,
-        }
+        scene = __evaluate_match(scene_data.original_parsed_filename, scene_data, config, phash).as_dict()
+        scene.update(
+            {
+                'name_parts': scene_data.original_parsed_filename,
+                'looked_up': {
+                    'uuid': scene_data.uuid,
+                    'type': scene_data.type.value,
+                    'name': scene_data.name,
+                    'date': scene_data.date,
+                    'poster_url': scene_data.poster_url,
+                    'site': scene_data.site,
+                    'network': scene_data.network,
+                    'performers': scene_data.performers,
+                },
+            }
+        )
         files.append(scene)
 
     return files
@@ -123,7 +153,7 @@ def get_search_results(query: str, search_type: SearchType, file: str, config: N
         url = __build_url(config, name=query, page=page, scene_type=SceneType.JAV)
         responses[url] = __request_response_json_object(url, config)
 
-    files = metadataapi_responses_to_webui_response(responses, config)
+    files = metadataapi_responses_to_webui_response(responses, config, query)
 
     res = {
         'file': file,
@@ -157,7 +187,7 @@ def get_phash_results(file: str, search_type: SearchType, config: NamerConfig) -
         url = __build_url(config, phash=phash, scene_type=SceneType.JAV)
         responses[url] = __request_response_json_object(url, config)
 
-    files = metadataapi_responses_to_webui_response(responses, config)
+    files = metadataapi_responses_to_webui_response(responses, config, file, phash)
 
     res = {
         'file': file,
@@ -175,7 +205,7 @@ def delete_file(file_name_str: str, config: NamerConfig) -> bool:
     if not is_acceptable_file(file_name, config) or not config.allow_delete_files:
         return False
 
-    if config.del_other_files:
+    if config.del_other_files and file_name.is_dir():
         target_name = config.failed_dir / Path(file_name_str).parts[0]
         shutil.rmtree(target_name)
     else:
@@ -215,6 +245,9 @@ def _read_failed_log_file(file: Path, file_size: int, file_update: float) -> Opt
 
                 if not hasattr(item.looked_up, 'hashes'):
                     item.looked_up.hashes = []
+
+            if not hasattr(decoded, 'fileinfo'):
+                decoded.fileinfo = FileInfo()
 
             res = decoded
 

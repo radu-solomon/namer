@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -26,9 +27,8 @@ class ImageDownloadType(str, Enum):
 
 
 # noinspection PyDataclass
-@dataclass(init=False, repr=False, eq=True, order=False, unsafe_hash=True, frozen=False)
+@dataclass(init=False, repr=False, eq=True, order=False, unsafe_hash=False, frozen=False)
 class NamerConfig:
-
     # pylint: disable=too-many-instance-attributes
 
     config_file: Path
@@ -44,10 +44,10 @@ class NamerConfig:
     porndb_token: str
     """
     token to access porndb.
-    sign up here: https://metadataapi.net/
+    sign up here: https://theporndb.net/
     """
 
-    name_parser: str = "{_site}{_optional_date}{_sep}{_ts}{_name}{_dot}{_ext}"
+    name_parser: str = '{_site}{_optional_date}{_sep}{_ts}{_name}{_dot}{_ext}'
     """
     This config may be a regex you provide, or a set of token used to build a regex.
 
@@ -73,7 +73,7 @@ class NamerConfig:
     dates will not be used in matching, possibly allowing false positives.
     """
 
-    inplace_name: str = "{full_site} - {date} - {name} [WEBDL-{resolution}].{ext}"
+    inplace_name: str = '{full_site} - {date} - {name} [WEBDL-{resolution}].{ext}'
     """
     How to write output file name.  When namer.py is run this is applied in place
     (next to the file to be processed).
@@ -100,6 +100,8 @@ class NamerConfig:
     * 'name' - the scene name
     * 'site' - the site name, BrazzersExxtra, AllHerLuv, Deeper, etc with spaces removed.
     * 'full_site' - the site name from porndb, unmodified, i.e: Brazzers Exxtra, All Her Luv, etc.
+    * 'parent' - the parent site/studio name from porndb, unmodified, i.e: Brazzers, etc.
+    * 'full_parent' - the parent full site/studio name from porndb, unmodified, i.e: Brazzers, Vixen, etc.
     * 'network' - the network site or studio name, MindGeek, Vixen, etc with spaces removed.
     * 'full_network' - the network full site/studio name from porndb, unmodified, i.e: Mind Geek, Vixen, etc.
     * 'performers' - comma seperated list of female performers
@@ -113,6 +115,13 @@ class NamerConfig:
     min_file_size: int = 300
     """
     minimum file size to process in MB, ignored if a file is to be processed
+    """
+
+    convert_container_to: Optional[str] = None
+    """
+    Without modify the enconding where possible covert container (aka file types) to this
+    desired container type ("mp4", "mkv", "avi", ect), plugged in to the command:
+    "ffmpeg -i input.mkv -c copy output.<type>"
     """
 
     preserve_duplicates: bool = True
@@ -231,7 +240,17 @@ class NamerConfig:
     a set of tags that indicates an individual video is vr.
     """
 
-    enabled_requests_cache: bool = True
+    database_path: Path = Path(tempfile.gettempdir()) / 'namer'
+    """
+    Path where stores namer system data.
+    """
+
+    use_database: bool = False
+    """
+    Use namer database.
+    """
+
+    use_requests_cache: bool = True
     """
     Cache http requests
     """
@@ -246,13 +265,18 @@ class NamerConfig:
     Should plex movies have S##E## stripped out of movie names (to allow videos to be visible in plex)
     """
 
-    override_tpdb_address: str = "https://api.metadataapi.net"
+    path_cleanup: bool = False
+    """
+    Cleanup final filename
+    """
+
+    override_tpdb_address: str = 'https://api.theporndb.net'
     """
     Used only for testing, can override the location of the porn database - usually to point at a locally
     running server that responds like tpdb to predefined queries.
     """
 
-    enabled_tagging: bool = True
+    enabled_tagging: bool = False
     """
     Currently metadata pulled from the porndb can be added to mp4 files.
     This metadata will be read in fully by Plex, and Apple TV app, partially by Jellyfin (no artist support).
@@ -263,7 +287,7 @@ class NamerConfig:
     No flags in this section will be used if this is not set to true.
     """
 
-    enabled_poster: bool = True
+    enabled_poster: bool = False
     """
     Should the poster fetched from the porn db be written in to the metadata of the mp4.
     This poster will be displayed in Plex, Jellyfin and Apple TV app.
@@ -275,13 +299,18 @@ class NamerConfig:
     List of which images would be downloaded
     """
 
+    image_format: str = 'png'
+    """
+    Downloaded images format: png, jpeg
+    """
+
     enable_metadataapi_genres: bool = False
     """
     Should genres pulled from the porndb be added to the file?   These genres are noisy and
     not recommend for use.  If this is false a single default genre will be used.
     """
 
-    default_genre: str = "Adult"
+    default_genre: str = 'Adult'
     """
     If genre's are not copied this is the default genre added to files.
     Default value is adult.
@@ -329,12 +358,12 @@ class NamerConfig:
     If there is a phash match, require any name match be in the top N results
     """
 
-    ignored_dir_regex: Pattern = re.compile(r".*_UNPACK_.*", re.IGNORECASE)
+    ignored_dir_regex: Pattern = re.compile(r'.*_UNPACK_.*', re.IGNORECASE)
     """
     If a file found in the watch dir matches this regex it will be ignored, useful for some file processes.
     """
 
-    new_relative_path_name: str = "{full_site}/{full_site} - {date} - {name} [WEBDL-{resolution}].{ext}"
+    new_relative_path_name: str = '{full_site}/{full_site} - {date} - {name} [WEBDL-{resolution}].{ext}'
     """
     like inplace_name above used for local call for renaming, this instead is used to move a file/dir to a location relative
     to the dest_dir below on successful matching/tagging.
@@ -378,6 +407,16 @@ class NamerConfig:
     Extra time to sleep in seconds to allow all information to be copied in dir
     """
 
+    queue_limit: int = 0
+    """
+    Maximum amount of items in queue
+    """
+
+    queue_sleep_time: int = 5
+    """
+    Sleep time between queue size check
+    """
+
     web: bool = True
     """
     Run webserver while running watchdog
@@ -388,12 +427,12 @@ class NamerConfig:
     Web server port
     """
 
-    host: str = "0.0.0.0"
+    host: str = '0.0.0.0'
     """
     Web server host
     """
 
-    web_root: Optional[str] = ""
+    web_root: Optional[str] = ''
     """
     webroot (root url to place pages), useful for reverse proxies
     """
@@ -403,19 +442,29 @@ class NamerConfig:
     Allow to delete files in web interface
     """
 
-    add_max_percent_column: bool = False
+    add_columns_from_log: bool = False
     """
-    Add maximal percent from failed log to table in web interface
+    Add columns from failed log to table in web interface
     """
 
-    cache_session: Optional[CachedSession]
+    add_complete_column: bool = False
     """
-    If enabled_requests_cache is true this http.session will be constructed and used for requests to tpdb.
+    Add creation date from failed log to table in web interface
+    """
+
+    cache_session: Optional[CachedSession] = None
+    """
+    If use_requests_cache is true this http.session will be constructed and used for requests to tpdb.
     """
 
     debug: bool = False
     """
     Set logger level to debug
+    """
+
+    console_format: str
+    """
+    Set logger output format
     """
 
     manual_mode: bool = False
@@ -431,107 +480,119 @@ class NamerConfig:
     """
 
     ffmpeg: FFMpeg = FFMpeg()
-    vph: VideoPerceptualHash = StashVideoPerceptualHash()
+    vph: VideoPerceptualHash = StashVideoPerceptualHash()  # type: ignore
     vph_alt: VideoPerceptualHash = VideoPerceptualHash(ffmpeg)
     re_cleanup: List[Pattern]
 
     def __init__(self):
-        if sys.platform != "win32":
+        if sys.platform != 'win32':
             self.set_uid = os.getuid()
             self.set_gid = os.getgid()
 
-        self.re_cleanup = [re.compile(fr'\b{regex}\b', re.IGNORECASE) for regex in database.re_cleanup]
+        self.re_cleanup = [re.compile(rf'\b{regex}\b', re.IGNORECASE) for regex in database.re_cleanup]
 
     def __str__(self):
         config = self.to_dict()
 
         output = []
         for key in config:
-            output.append(f"{key}:")
+            output.append(f'{key}:')
             for value in config[key]:
-                output.append(f"  {value}: {config[key][value]}")
+                output.append(f'  {value}: {config[key][value]}')
 
         return '\n'.join(output)
+
+    def __hash__(self):
+        return hash(self.__str__())
 
     def to_json(self):
         config = self.to_dict()
         return json.dumps(config, indent=2)
 
     def to_dict(self) -> dict:
-        porndb_token = "None is Set, Go to https://metadatapi.net/ to get one!"
+        porndb_token = 'None is Set, Go to https://metadatapi.net/ to get one!'
         if self.porndb_token:
-            porndb_token = "*" * len(self.porndb_token)
+            porndb_token = '*' * len(self.porndb_token)
 
         config = {
-            "Namer Config": {
-                "porndb_token": porndb_token,
-                "inplace_name": self.inplace_name,
-                "prefer_dir_name_if_available": self.prefer_dir_name_if_available,
-                "target_extensions": self.target_extensions,
-                "write_namer_log": self.write_namer_log,
-                "write_namer_failed_log": self.write_namer_failed_log,
-                "trailer_location": self.trailer_location,
-                "sites_with_no_date_info": self.sites_with_no_date_info,
-                "movie_data_preferred": self.movie_data_preferred,
-                "vr_studios": self.vr_studios,
-                "vr_tags": self.vr_tags,
-                "site_abbreviations": {key.pattern: value for key, value in self.site_abbreviations.items()},
-                "update_permissions_ownership": self.update_permissions_ownership,
-                "set_dir_permissions": self.set_dir_permissions,
-                "set_file_permissions": self.set_file_permissions,
-                "set_uid": self.set_uid,
-                "set_gid": self.set_gid,
-                "max_performer_names": self.max_performer_names,
-                "enabled_requests_cache": self.enabled_requests_cache,
-                "requests_cache_expire_minutes": self.requests_cache_expire_minutes,
-                "override_tpdb_address": self.override_tpdb_address,
-                "plex_hack": self.plex_hack,
+            'Namer Config': {
+                'porndb_token': porndb_token,
+                'inplace_name': self.inplace_name,
+                'prefer_dir_name_if_available': self.prefer_dir_name_if_available,
+                'target_extensions': self.target_extensions,
+                'write_namer_log': self.write_namer_log,
+                'write_namer_failed_log': self.write_namer_failed_log,
+                'trailer_location': self.trailer_location,
+                'sites_with_no_date_info': self.sites_with_no_date_info,
+                'movie_data_preferred': self.movie_data_preferred,
+                'vr_studios': self.vr_studios,
+                'vr_tags': self.vr_tags,
+                'site_abbreviations': {key.pattern: value for key, value in self.site_abbreviations.items()},
+                'update_permissions_ownership': self.update_permissions_ownership,
+                'set_dir_permissions': self.set_dir_permissions,
+                'set_file_permissions': self.set_file_permissions,
+                'set_uid': self.set_uid,
+                'set_gid': self.set_gid,
+                'max_performer_names': self.max_performer_names,
+                'use_database': self.use_database,
+                'database_path': str(self.database_path),
+                'use_requests_cache': self.use_requests_cache,
+                'requests_cache_expire_minutes': self.requests_cache_expire_minutes,
+                'override_tpdb_address': self.override_tpdb_address,
+                'plex_hack': self.plex_hack,
+                'convert_container_to': self.convert_container_to,
+                'path_cleanup': self.path_cleanup,
             },
-            "Phash": {
-                "search_phash": self.search_phash,
-                "send_phash": self.send_phash,
-                "use_alt_phash_tool": self.use_alt_phash_tool,
-                "max_ffmpeg_workers": self.max_ffmpeg_workers,
-                "use_gpu": self.use_gpu,
+            'Phash': {
+                'search_phash': self.search_phash,
+                'send_phash': self.send_phash,
+                'use_alt_phash_tool': self.use_alt_phash_tool,
+                'max_ffmpeg_workers': self.max_ffmpeg_workers,
+                'use_gpu': self.use_gpu,
                 # "require_match_phash_top": self.require_match_phash_top,
                 # "send_phash_of_matches_to_tpdb": self.send_phash_of_matches_to_tpdb,
             },
-            "Duplicate Config": {
-                "preserve_duplicates": self.preserve_duplicates,
-                "max_desired_resolutions": self.max_desired_resolutions,
-                "desired_codec": self.desired_codec,
+            'Duplicate Config': {
+                'preserve_duplicates': self.preserve_duplicates,
+                'max_desired_resolutions': self.max_desired_resolutions,
+                'desired_codec': self.desired_codec,
             },
-            "Tagging Config": {
-                "write_nfo": self.write_nfo,
-                "enabled_tagging": self.enabled_tagging,
-                "enabled_poster": self.enabled_poster,
-                "download_type": self.download_type,
-                "enable_metadataapi_genres": self.enable_metadataapi_genres,
-                "default_genre": self.default_genre,
-                "language": self.language,
-                "mark_collected": self.mark_collected,
+            'Tagging Config': {
+                'write_nfo': self.write_nfo,
+                'enabled_tagging': self.enabled_tagging,
+                'enabled_poster': self.enabled_poster,
+                'download_type': self.download_type,
+                'image_format': self.image_format,
+                'enable_metadataapi_genres': self.enable_metadataapi_genres,
+                'default_genre': self.default_genre,
+                'language': self.language,
+                'mark_collected': self.mark_collected,
             },
-            "Watchdog Config": {
-                "ignored_dir_regex": self.ignored_dir_regex.pattern,
-                "min_file_size": self.min_file_size,
-                "del_other_files": self.del_other_files,
-                "new_relative_path_name": self.new_relative_path_name,
-                "watch_dir": str(self.watch_dir),
-                "work_dir": str(self.work_dir),
-                "failed_dir": str(self.failed_dir),
-                "dest_dir": str(self.dest_dir),
-                "retry_time": self.retry_time,
-                "extra_sleep_time": self.extra_sleep_time,
-                "web": self.web,
-                "port": self.port,
-                "host": self.host,
-                "web_root": self.web_root,
-                "allow_delete_files": self.allow_delete_files,
-                "add_max_percent_column": self.add_max_percent_column,
-                "debug": self.debug,
-                "manual_mode": self.manual_mode,
-                "diagnose_errors": self.diagnose_errors,
-            }
+            'Watchdog Config': {
+                'ignored_dir_regex': self.ignored_dir_regex.pattern,
+                'min_file_size': self.min_file_size,
+                'del_other_files': self.del_other_files,
+                'new_relative_path_name': self.new_relative_path_name,
+                'watch_dir': str(self.watch_dir),
+                'work_dir': str(self.work_dir),
+                'failed_dir': str(self.failed_dir),
+                'dest_dir': str(self.dest_dir),
+                'retry_time': self.retry_time,
+                'extra_sleep_time': self.extra_sleep_time,
+                'queue_limit': self.queue_limit,
+                'queue_sleep_time': self.queue_sleep_time,
+                'web': self.web,
+                'port': self.port,
+                'host': self.host,
+                'web_root': self.web_root,
+                'allow_delete_files': self.allow_delete_files,
+                'add_columns_from_log': self.add_columns_from_log,
+                'add_complete_column': self.add_complete_column,
+                'debug': self.debug,
+                'console_format': self.console_format,
+                'manual_mode': self.manual_mode,
+                'diagnose_errors': self.diagnose_errors,
+            },
         }
 
         return config

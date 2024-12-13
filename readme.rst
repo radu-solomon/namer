@@ -6,18 +6,7 @@
 |logo| Namer
 ##############
 
-.. image:: https://github.com/ThePornDatabase/namer/actions/workflows/ci.yml/badge.svg?
-  :target: https://github.com/ThePornDatabase/namer/actions/workflows/ci.yml/
-.. image:: https://codecov.io/gh/ThePornDatabase/namer/branch/main/graph/badge.svg?token=4MQEN2NUKZ
-  :target: https://codecov.io/gh/ThePornDatabase/namer
-.. image:: https://badge.fury.io/py/namer.svg?
-  :target: https://badge.fury.io/py/namer
-.. image:: https://img.shields.io/pypi/dm/namer?logo=pypi&logoColor=fff
-  :target: https://pypi.org/project/namer
-.. image:: https://static.pepy.tech/personalized-badge/namer?period=total&units=international_system&left_color=grey&right_color=yellowgreen&left_text=Downloads
-  :target: https://pepy.tech/project/namer
-.. image:: https://static.pepy.tech/personalized-badge/namer?period=month&units=international_system&left_color=grey&right_color=yellowgreen&left_text=Downloads/Month
-  :target: https://pepy.tech/project/namer
+|_ci_badge| |_codecov_badge| |_pypi_badge| |_pypi_download_badge| |_download_badge| |_download_month_badge|
 
 Namer is a powerful web app, folder watchdog and command line tool for renaming video files and tagging mp4 video files in a way that helps plex/jellyfin/emby and related plugins extract that data or lookup data with the PornDB_'s plugins for plex or jellyfin/emby.
 
@@ -114,9 +103,15 @@ You have two choices.   Do you use docker?  Pull the docker image, here's docker
         - TZ=America/Los_Angeles
         - NAMER_CONFIG=/config/namer.cfg
       volumes:
-        - /apps/namer/:/config <- this will store the namer.cfg file copied by you from the git repo ( namer/namer.cfg.default )
-        - /media:/data <- this will have the four folders namer needs to work, referenced in the namer.cfg file you create.
-      restart: always
+        - /apps/namer/:/config # <- this will store the namer.cfg file copied by you from the git repo ( namer/namer.cfg.default )
+        - /media:/data # <- this will have the four folders namer needs to work, referenced in the namer.cfg file you create.
+    healthcheck: # <- if on a qnap nas, the default health check will not work for you, domain name is the container_name
+      test: [ "CMD-SHELL", "curl -f http://namer:6980/<replace with your webroot>/api/healthcheck || exit 1" ]
+      interval: 1m
+      timeout: 30s
+      # retries: 3
+      # start_period: 40s
+    restart: always
 
 Copy namer.cfg to your config location (a path mapped to /config/namer.cfg above), and set values for your setup.
 The config is well commented and you should only need to add a token for the porndb and change file locations.
@@ -210,7 +205,7 @@ Pull Requests Are Welcome!
 
 Just be sure to pay attention to the tests and any failing pylint results.   If you want to vet a pr will be accepted before building code, file an new feature request issue, and 4c0d3r will comment on it and set you up for success.   Tests are must.
 
-.. _PornDB: http://metadataapi.net/
+.. _PornDB: http://theporndb.net/
 .. _namer section: https://github.com/ThePornDatabase/namer/blob/main/namer/namer.cfg.default#L1
 .. _metadata section: https://github.com/ThePornDatabase/namer/blob/main/namer/namer.cfg.default#L59
 .. _watchdog section: https://github.com/ThePornDatabase/namer/blob/main/namer/namer.cfg.default#L89
@@ -225,3 +220,16 @@ Just be sure to pay attention to the tests and any failing pylint results.   If 
 .. _Homebrew: https://docs.brew.sh/Installation
 .. _Chocolatey: https://chocolatey.org/install
 .. _Install Instructions: https://github.com/ThePornDatabase/namer/blob/main/install_instructions.md
+
+.. |_ci_badge| image:: https://github.com/ThePornDatabase/namer/actions/workflows/ci.yml/badge.svg?
+  :target: https://github.com/ThePornDatabase/namer/actions/workflows/ci.yml/
+.. |_codecov_badge| image:: https://codecov.io/gh/ThePornDatabase/namer/branch/main/graph/badge.svg?token=4MQEN2NUKZ
+  :target: https://codecov.io/gh/ThePornDatabase/namer
+.. |_pypi_badge| image:: https://badge.fury.io/py/namer.svg?
+  :target: https://badge.fury.io/py/namer
+.. |_pypi_download_badge| image:: https://img.shields.io/pypi/dm/namer?logo=pypi&logoColor=fff
+  :target: https://pypi.org/project/namer
+.. |_download_badge| image:: https://static.pepy.tech/personalized-badge/namer?period=total&units=international_system&left_color=grey&right_color=yellowgreen&left_text=Downloads
+  :target: https://pepy.tech/project/namer
+.. |_download_month_badge| image:: https://static.pepy.tech/personalized-badge/namer?period=month&units=international_system&left_color=grey&right_color=yellowgreen&left_text=Downloads/Month
+  :target: https://pepy.tech/project/namer

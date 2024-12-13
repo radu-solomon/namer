@@ -1,7 +1,7 @@
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Callable
 
 from flask import Blueprint, make_response, request
 from flask.wrappers import Response
@@ -9,7 +9,7 @@ from flask.wrappers import Response
 from namer.web.server import GenericWebServer
 
 
-def get_routes(responses: Dict[str, bytes]) -> Blueprint:
+def get_routes(responses: Dict[str, Any]) -> Blueprint:
     """
     Builds a blueprint for flask with passed in context, the NamerConfig.
     """
@@ -20,8 +20,19 @@ def get_routes(responses: Dict[str, bytes]) -> Blueprint:
     def get_files(path) -> Response:
         # args = request.args
         output = responses.get(request.full_path)
-        if output:
-            response = make_response(output, 200)
+        value = None
+        if isinstance(output, Callable):
+            output = output()
+        if isinstance(output, bytearray):
+            value = output
+        if isinstance(output, Path):
+            file: Path = output
+            value = bytearray(file.read_bytes())
+        if isinstance(output, str):
+            value = bytearray(output, 'utf-8')
+
+        if value:
+            response = make_response(value, 200)
         else:
             response = make_response('', 404)
         # response.mimetype = "text/plain"
@@ -31,12 +42,12 @@ def get_routes(responses: Dict[str, bytes]) -> Blueprint:
 
 
 class ParrotWebServer(GenericWebServer):
-    __responses: Dict[str, bytes]
+    __responses: Dict[str, Any]
     __background_thread: Optional[Thread]
 
     def __init__(self):
         self.__responses = {}
-        super().__init__("127.0.0.1", port=0, webroot="/", blueprints=[get_routes(self.__responses)], static_path=None)
+        super().__init__('127.0.0.1', port=0, webroot='/', blueprints=[get_routes(self.__responses)], static_path=None)
 
     def __enter__(self):
         self.__background_thread = Thread(target=self.start)
@@ -48,7 +59,7 @@ class ParrotWebServer(GenericWebServer):
             tries += 1
 
         if super().get_effective_port is None:
-            raise RuntimeError("application did not get assigned a port within 4 seconds.")
+            raise RuntimeError('application did not get assigned a port within 4 seconds.')
 
         return self
 
@@ -62,13 +73,4 @@ class ParrotWebServer(GenericWebServer):
         self.__simple_exit__()
 
     def set_response(self, url: str, response):
-        value: Optional[bytearray] = None
-        if isinstance(response, bytearray):
-            value = response
-        if isinstance(response, Path):
-            file: Path = response
-            value = bytearray(file.read_bytes())
-        if isinstance(response, str):
-            value = bytearray(response, "utf-8")
-        if value:
-            self.__responses[url] = value
+        self.__responses[url] = response

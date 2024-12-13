@@ -9,8 +9,9 @@ from typing import List, Optional, Pattern
 from loguru import logger
 
 from namer.configuration import NamerConfig
+from namer.videophash import PerceptualHash
 
-DEFAULT_REGEX_TOKENS = "{_site}{_sep}{_optional_date}{_ts}{_name}{_dot}{_ext}"
+DEFAULT_REGEX_TOKENS = '{_site}{_sep}{_optional_date}{_ts}{_name}{_dot}{_ext}'
 
 
 @dataclass(init=False, repr=False, eq=True, order=False, unsafe_hash=True, frozen=False)
@@ -50,6 +51,10 @@ class FileInfo:
     """
     What was originally parsed.
     """
+    hashes: Optional[PerceptualHash] = None
+    """
+    File hashes.
+    """
 
     def __str__(self) -> str:
         return f"""site: {self.site}
@@ -58,6 +63,7 @@ class FileInfo:
         name: {self.name}
         extension: {self.extension}
         original full name: {self.source_file_name}
+        hashes: {self.hashes.to_dict() if self.hashes else None}
         """
 
 
@@ -93,24 +99,24 @@ def parser_config_to_regex(tokens: str) -> Pattern[str]:
     ```
     """
 
-    _sep = r"[\.\- ]+"
-    _site = r"(?P<site>.*?)"
-    _date = r"(?P<year>[0-9]{2}(?:[0-9]{2})?)[\.\- ]+(?P<month>[0-9]{2})[\.\- ]+(?P<day>[0-9]{2})"
-    _optional_date = r"(?:(?P<year>[0-9]{2}(?:[0-9]{2})?)[\.\- ]+(?P<month>[0-9]{2})[\.\- ]+(?P<day>[0-9]{2})[\.\- ]+)?"
-    _ts = r"((?P<trans>[T|t][S|s])" + _sep + "){0,1}"
-    _name = r"(?P<name>(?:.(?![0-9]{2,4}[\.\- ][0-9]{2}[\.\- ][0-9]{2}))*)"
-    _dot = r"\."
-    _ext = r"(?P<ext>[a-zA-Z0-9]{3,4})$"
+    _sep = r'[\.\- ]+'
+    _site = r'(?P<site>.*?)'
+    _date = r'(?P<year>[0-9]{2}(?:[0-9]{2})?)[\.\- ]+(?P<month>[0-9]{2})[\.\- ]+(?P<day>[0-9]{2})'
+    _optional_date = r'(?:(?P<year>[0-9]{2}(?:[0-9]{2})?)[\.\- ]+(?P<month>[0-9]{2})[\.\- ]+(?P<day>[0-9]{2})[\.\- ]+)?'
+    _ts = r'((?P<trans>[T|t][S|s])' + _sep + '){0,1}'
+    _name = r'(?P<name>(?:.(?![0-9]{2,4}[\.\- ][0-9]{2}[\.\- ][0-9]{2}))*)'
+    _dot = r'\.'
+    _ext = r'(?P<ext>[a-zA-Z0-9]{3,4})$'
     regex = tokens.format_map(
         {
-            "_site": _site,
-            "_date": _date,
-            "_optional_date": _optional_date,
-            "_ts": _ts,
-            "_name": _name,
-            "_ext": _ext,
-            "_sep": _sep,
-            "_dot": _dot,
+            '_site': _site,
+            '_date': _date,
+            '_optional_date': _optional_date,
+            '_ts': _ts,
+            '_name': _name,
+            '_ext': _ext,
+            '_sep': _sep,
+            '_dot': _dot,
         }
     )
     return re.compile(regex)
@@ -127,24 +133,24 @@ def parse_file_name(filename: str, namer_config: NamerConfig) -> FileInfo:
     file_name_parts.extension = PurePath(filename).suffix[1:]
     match = regex.search(filename)
     if match:
-        if match.groupdict().get("year"):
-            prefix = "20" if len(match.group("year")) == 2 else ""
-            file_name_parts.date = prefix + match.group("year") + "-" + match.group("month") + "-" + match.group("day")
+        if match.groupdict().get('year'):
+            prefix = '20' if len(match.group('year')) == 2 else ''
+            file_name_parts.date = prefix + match.group('year') + '-' + match.group('month') + '-' + match.group('day')
 
-        if match.groupdict().get("name"):
-            file_name_parts.name = name_cleaner(match.group("name"), namer_config.re_cleanup)
+        if match.groupdict().get('name'):
+            file_name_parts.name = name_cleaner(match.group('name'), namer_config.re_cleanup)
 
-        if match.groupdict().get("site"):
-            file_name_parts.site = match.group("site")
+        if match.groupdict().get('site'):
+            file_name_parts.site = match.group('site')
 
-        if match.groupdict().get("trans"):
-            trans = match.group("trans")
-            file_name_parts.trans = bool(trans and trans.strip().upper() == "TS")
+        if match.groupdict().get('trans'):
+            trans = match.group('trans')
+            file_name_parts.trans = bool(trans and trans.strip().upper() == 'TS')
 
-        file_name_parts.extension = match.group("ext")
+        file_name_parts.extension = match.group('ext')
         file_name_parts.source_file_name = filename
     else:
-        logger.debug("Could not parse target name which may be a file (or directory) name depending on settings and input: {}", filename)
+        logger.debug('Could not parse target name which may be a file (or directory) name depending on settings and input: {}', filename)
 
     return file_name_parts
 

@@ -1,9 +1,16 @@
 // noinspection ES6UnusedImports
 // eslint-disable-next-line no-unused-vars
-import { Popover, Modal } from 'bootstrap'
+import { Modal, Popover } from 'bootstrap'
 
 import $ from 'jquery'
 import 'datatables.net-bs5'
+import 'datatables.net-colreorder-bs5'
+import 'datatables.net-buttons/js/buttons.colVis'
+import 'datatables.net-buttons-bs5'
+import 'datatables.net-responsive'
+import 'datatables.net-responsive-bs5'
+import 'datatables.net-fixedheader'
+import 'datatables.net-fixedheader-bs5'
 import { escape } from 'lodash'
 
 import { Helpers } from './helpers'
@@ -12,6 +19,7 @@ import './themes'
 window.jQuery = $
 
 const filesResult = $('#filesResult')
+const tableButtons = $('#tableButtons')
 const resultForm = $('#searchResults .modal-body')
 const resultFormTitle = $('#modalSearchResultsLabel span')
 const logForm = $('#logFile .modal-body')
@@ -108,7 +116,7 @@ filesResult.on('click', '.delete', function () {
 })
 
 refreshFiles.on('click', function () {
-  Helpers.refreshFiles(filesResult, $(this).data('target'))
+  Helpers.refreshFiles(filesResult, tableButtons, $(this).data('target'))
   if (queueSize) {
     Helpers.updateQueueSize(queueSize)
   }
@@ -142,7 +150,7 @@ function rename () {
   })
 }
 
-Helpers.setTableSort(filesResult)
+Helpers.setTableSort(filesResult, tableButtons)
 
 if (queueSize) {
   Helpers.updateQueueSize(queueSize)
