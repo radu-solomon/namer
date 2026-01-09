@@ -1,14 +1,18 @@
 """
 Tests for namer_file_parser.py
 """
+
 import io
 import shutil
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from loguru import logger
+
 from namer.fileinfo import parse_file_name
 from namer.command import make_command
+from test import utils
 from test.utils import environment, sample_config
 
 REGEX_TOKEN = '{_site}{_sep}{_optional_date}{_ts}{_name}{_dot}{_ext}'
@@ -18,6 +22,12 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
     """
     Always test first.
     """
+
+    def __init__(self, method_name='runTest'):
+        super().__init__(method_name)
+
+        if not utils.is_debugging():
+            logger.remove()
 
     def test_parse_file_name(self):
         """
@@ -123,10 +133,10 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         """
         Test the main method.
         """
-        with environment() as (tmpdir, _parrot, config):
-            tempdir = Path(tmpdir)
+        with environment() as (tmp_dir, _parrot, config):
+            temp_dir = Path(tmp_dir)
             test_dir = Path(__file__).resolve().parent
-            target_file = tempdir / 'EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.mp4'
+            target_file = temp_dir / 'EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.mp4'
             shutil.copy(test_dir / 'Site.22.01.01.painful.pun.XXX.720p.xpost.mp4', target_file)
             config.min_file_size = 0
             command = make_command(target_file, config)
@@ -145,10 +155,10 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         """
         Test the main method.
         """
-        with environment() as (tmpdir, _parrot, config):
-            tempdir = Path(tmpdir)
+        with environment() as (tmp_dir, _parrot, config):
+            temp_dir = Path(tmp_dir)
             test_dir = Path(__file__).resolve().parent
-            target_file = tempdir / 'EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.1080p.HEVC.x265.PRT[XvX]-xpost' / 'EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.mp4'
+            target_file = temp_dir / 'EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.1080p.HEVC.x265.PRT[XvX]-xpost' / 'EvilAngel.22.01.03.Carmela.Clutch.Fabulous.Anal.3-Way.XXX.mp4'
             target_file.parent.mkdir()
             shutil.copy(test_dir / 'Site.22.01.01.painful.pun.XXX.720p.xpost.mp4', target_file)
             config.min_file_size = 0

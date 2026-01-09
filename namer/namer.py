@@ -4,6 +4,7 @@ There name, or directory name, will be analyzed, matched against
 the porndb, and used for renaming (in place), and updating a mp4
 file's metadata (poster, artists, etc.)
 """
+
 import argparse
 import sys
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from pathlib import Path
 from random import choices
 from typing import List, Optional
 
+import orjson
 from loguru import logger
 
 from namer.command import Command
@@ -23,6 +25,7 @@ from namer.command import make_command, move_command_files, move_to_final_locati
 from namer.database import search_file_in_database, write_file_to_database
 from namer.ffmpeg import FFProbeResults, FFMpeg
 from namer.fileinfo import FileInfo
+from namer.http import Http
 from namer.metadataapi import get_complete_metadataapi_net_fileinfo, get_image, get_trailer, match, share_hash
 from namer.moviexml import parse_movie_xml_file, write_nfo
 from namer.name_formatter import PartialFormatter
@@ -115,8 +118,10 @@ def tag_in_place(video: Optional[Path], config: NamerConfig, new_metadata: Looke
     if new_metadata and video:
         poster = None
         if config.enabled_tagging and video.suffix.lower() == '.mp4':
-            random = ''.join(choices(population=string.ascii_uppercase + string.digits, k=10))
-            poster = get_image(new_metadata.poster_url, random, video, config) if new_metadata.poster_url else None
+            if config.enabled_poster:
+                random = ''.join(choices(population=string.ascii_uppercase + string.digits, k=10))
+                poster = get_image(new_metadata.poster_url, random, video, config) if new_metadata.poster_url else None
+
             logger.info('Updating file metadata (atoms): {}', video)
             update_mp4_file(video, new_metadata, poster, ffprobe_results, config)
 
@@ -133,6 +138,8 @@ def get_local_metadata_if_requested(video_file: Path) -> Optional[LookedUpFileIn
     nfo_file = video_file.parent / (video_file.stem + '.nfo')
     if nfo_file.is_file() and nfo_file.exists():
         return parse_movie_xml_file(nfo_file)
+
+    return None
 
 
 def process_file(command: Command) -> Optional[Command]:
@@ -170,12 +177,7 @@ def process_file(command: Command) -> Optional[Command]:
             if new_metadata is not None:
                 new_metadata.original_parsed_filename = command.parsed_file
             else:
-                logger.error(
-                    """
-                        Could not process files: {}
-                        In the file's name should start with a site, a date and end with an extension""",
-                    command.input_file,
-                )
+                logger.error('Could not process files: {}\nIn the file\'s name should start with a site, a date and end with an extension', command.input_file)
         # elif new_metadata is None and command.stashdb_id is not None and command.ff_probe_results is not None:
         #    phash = VideoPerceptualHash().get_phash(command.target_movie_file)
         #    todo use phash
@@ -242,13 +244,15 @@ def process_file(command: Command) -> Optional[Command]:
                 target = move_to_final_location(command, new_metadata)
                 tag_in_place(target.target_movie_file, command.config, new_metadata, ffprobe_results)
                 add_extra_artifacts(target.target_movie_file, new_metadata, search_results, phash, command.config)
-
+                send_webhook_notification(target.target_movie_file, command.config)
                 logger.success('Done processing file: {}, moved to {}', command.target_movie_file, target.target_movie_file)
                 return target
         elif command.inplace is False:
             failed = move_command_files(command, command.config.failed_dir)
             if failed is not None and search_results is not None and failed.config.write_namer_failed_log:
                 write_log_file(failed.target_movie_file, search_results, failed.config)
+
+    return None
 
 
 def add_extra_artifacts(video_file: Path, new_metadata: LookedUpFileInfo, search_results: ComparisonResults, phash: Optional[PerceptualHash], config: NamerConfig):
@@ -273,6 +277,31 @@ def add_extra_artifacts(video_file: Path, new_metadata: LookedUpFileInfo, search
 
         if config.write_nfo:
             write_nfo(video_file, new_metadata, config, trailer, poster, background, phash)
+
+
+def send_webhook_notification(video_file: Path, config: NamerConfig):
+    """
+    Send a webhook notification to the configured URL when a file is successfully renamed.
+    """
+    if not config.webhook_enabled or not config.webhook_url:
+        return
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    data = orjson.dumps({
+        'target_movie_file': str(video_file)
+    })
+
+    response = None
+    try:
+        response = Http.post(config.webhook_url, headers=headers, data=data)
+    except Exception as e:
+        logger.error(f'Failed to send webhook notification: {str(e)}')
+
+    if response and response.ok:
+        logger.info(f'Webhook notification sent successfully to {config.webhook_url}')
 
 
 def check_arguments(file_to_process: Path, dir_to_process: Path, config_override: Path):
@@ -352,8 +381,8 @@ def main(arg_list: List[str]):
         target = args.dir
 
     if args.many:
-        dir_with_sub_dirs_to_process(args.dir.absolute(), config, args.infos)
+        dir_with_sub_dirs_to_process(args.dir.resolve(), config, args.infos)
     else:
-        command = make_command(target.absolute(), config, inplace=True, nfo=args.infos)
+        command = make_command(target.resolve(), config, inplace=True, nfo=args.infos)
         if command is not None:
             process_file(command)

@@ -1,15 +1,16 @@
 """
 A wrapper allowing shutdown of a Flask server.
 """
-import json
+
+import datetime
 import logging
 import mimetypes
-import datetime
-from json import JSONEncoder
 from queue import Queue
 from threading import Thread
 from typing import Any, List, Optional, Union
 
+import numpy
+import orjson
 from flask import Blueprint, Flask
 from flask.json.provider import _default, JSONProvider
 from flask_compress import Compress
@@ -181,16 +182,36 @@ class NamerWebServer(GenericWebServer):
 
 
 class CustomJSONProvider(JSONProvider):
-    def dumps(self, obj, **kwargs):
-        return json.dumps(obj, **kwargs, cls=CustomJSONEncoder)
+    def dumps(self, obj: Any, **kwargs: Any):
+        return orjson.dumps(obj, option=orjson.OPT_PASSTHROUGH_SUBCLASS, default=default).decode('UTF-8')
 
-    def loads(self, s: Union[str, bytes], **kwargs):
-        return json.loads(s, **kwargs)
+    def loads(self, s: str | bytes, **kwargs: Any):
+        return orjson.loads(s)
 
 
-class CustomJSONEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, ImageHash):
-            return str(obj)
+def default(obj):
+    if isinstance(obj, ImageHash):
+        return str(obj)
 
-        return _default(obj)
+    if isinstance(obj, (numpy.int_, numpy.intc, numpy.intp, numpy.int8, numpy.int16, numpy.int32, numpy.int64, numpy.uint8, numpy.uint16, numpy.uint32, numpy.uint64)):
+        return int(obj)
+
+    elif isinstance(obj, (numpy.float16, numpy.float32, numpy.float64)):
+        return float(obj)
+
+    elif isinstance(obj, (numpy.complex64, numpy.complex128)):
+        return {
+            'real': obj.real,
+            'imag': obj.imag
+        }
+
+    elif isinstance(obj, (numpy.ndarray,)):
+        return obj.tolist()
+
+    elif isinstance(obj, (numpy.bool_)):
+        return bool(obj)
+
+    elif isinstance(obj, (numpy.void)):
+        return None
+
+    return _default(obj)

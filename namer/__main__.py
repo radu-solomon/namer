@@ -11,6 +11,7 @@ porndb for a match to be considered.  If the log file flag is enabled then a <or
 file will be written with all the potential matches sorted, descending by how closely the scene name/performer names
 match the file.
 """
+
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -73,7 +74,7 @@ def main():
 
     arg1 = None if len(arg_list) == 0 else arg_list[0]
     if arg1 == 'watchdog':
-        namer.watchdog.create_watcher(config).run()
+        namer.watchdog.main(config)
     elif arg1 == 'rename':
         namer.namer.main(arg_list[1:])
     elif arg1 == 'suggest':

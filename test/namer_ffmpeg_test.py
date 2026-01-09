@@ -1,27 +1,36 @@
 """
 Tests namer_ffmpeg
 """
+
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
+from loguru import logger
+
 from namer.ffmpeg import FFMpeg
+from test import utils
 
 
 class UnitTestAsTheDefaultExecution(unittest.TestCase):
     """
     Always test first.
     """
+    def __init__(self, method_name='runTest'):
+        super().__init__(method_name)
+
+        if not utils.is_debugging():
+            logger.remove()
 
     def test_get_resolution(self):
         """
         Verifies we can resolutions from mp4 files.
         """
         with tempfile.TemporaryDirectory(prefix='test') as tmpdir:
-            tempdir = Path(tmpdir)
-            shutil.copytree(Path(__file__).resolve().parent, tempdir / 'test')
-            file = tempdir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost.mp4'
+            temp_dir = Path(tmpdir)
+            shutil.copytree(Path(__file__).resolve().parent, temp_dir / 'test')
+            file = temp_dir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost.mp4'
             results = FFMpeg().ffprobe(file)
             self.assertIsNotNone(results)
             if results:
@@ -33,9 +42,9 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         Verifies we can get audio stream language names from files.
         """
         with tempfile.TemporaryDirectory(prefix='test') as tmpdir:
-            tempdir = Path(tmpdir)
-            shutil.copytree(Path(__file__).resolve().parent, tempdir / 'test')
-            file = tempdir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost.mp4'
+            temp_dir = Path(tmpdir)
+            shutil.copytree(Path(__file__).resolve().parent, temp_dir / 'test')
+            file = temp_dir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost.mp4'
             stream_number = FFMpeg().get_audio_stream_for_lang(file, 'und')
             self.assertEqual(stream_number, -1)
             stream_number = FFMpeg().get_audio_stream_for_lang(file, 'eng')
@@ -46,9 +55,9 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         read stream info.
         """
         with tempfile.TemporaryDirectory(prefix='test') as tmpdir:
-            tempdir = Path(tmpdir)
-            shutil.copytree(Path(__file__).resolve().parent, tempdir / 'test')
-            file = tempdir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost_wrong.mp4'
+            temp_dir = Path(tmpdir)
+            shutil.copytree(Path(__file__).resolve().parent, temp_dir / 'test')
+            file = temp_dir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost_wrong.mp4'
             results = FFMpeg().ffprobe(file)
             self.assertIsNotNone(results)
             if results:
@@ -75,9 +84,9 @@ class UnitTestAsTheDefaultExecution(unittest.TestCase):
         Verifies we can change default audio stream languages for mp4's.
         """
         with tempfile.TemporaryDirectory(prefix='test') as tmpdir:
-            tempdir = Path(tmpdir)
-            shutil.copytree(Path(__file__).resolve().parent, tempdir / 'test')
-            file = tempdir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost_wrong.mp4'
+            temp_dir = Path(tmpdir)
+            shutil.copytree(Path(__file__).resolve().parent, temp_dir / 'test')
+            file = temp_dir / 'test' / 'Site.22.01.01.painful.pun.XXX.720p.xpost_wrong.mp4'
             stream_number = FFMpeg().get_audio_stream_for_lang(file, 'und')
             self.assertEqual(stream_number, -1)
             stream_number = FFMpeg().get_audio_stream_for_lang(file, 'eng')

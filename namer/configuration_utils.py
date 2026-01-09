@@ -2,7 +2,6 @@
 Namer Configuration readers/verifier
 """
 
-import json
 import os
 import random
 import re
@@ -12,6 +11,7 @@ from typing import Dict, List, Optional, Callable, Pattern, Any, Tuple
 from configupdater import ConfigUpdater
 from pathlib import Path
 
+import orjson
 from loguru import logger
 
 from namer import database
@@ -31,6 +31,15 @@ def __verify_naming_config(config: NamerConfig, formatter: PartialFormatter) -> 
 
     success = __verify_name_string(formatter, 'inplace_name', config.inplace_name) and success
 
+    if config.inplace_name_scene:
+        success = __verify_name_string(formatter, 'inplace_name_scene', config.inplace_name_scene) and success
+
+    if config.inplace_name_movie:
+        success = __verify_name_string(formatter, 'inplace_name_movie', config.inplace_name_movie) and success
+
+    if config.inplace_name_jav:
+        success = __verify_name_string(formatter, 'inplace_name_jav', config.inplace_name_jav) and success
+
     return success
 
 
@@ -48,6 +57,15 @@ def __verify_watchdog_config(config: NamerConfig, formatter: PartialFormatter) -
         success = __verify_dir(config, dir_name, [name for name in watchdog_dirs if dir_name != name]) and success
 
     success = __verify_name_string(formatter, 'new_relative_path_name', config.new_relative_path_name) and success
+
+    if config.new_relative_path_name_scene:
+        success = __verify_name_string(formatter, 'new_relative_path_name_scene', config.new_relative_path_name_scene) and success
+
+    if config.new_relative_path_name_movie:
+        success = __verify_name_string(formatter, 'new_relative_path_name_movie', config.new_relative_path_name_movie) and success
+
+    if config.new_relative_path_name_jav:
+        success = __verify_name_string(formatter, 'new_relative_path_name_jav', config.new_relative_path_name_jav) and success
 
     return success
 
@@ -127,6 +145,8 @@ def get_str(updater: ConfigUpdater, section: str, key: str) -> Optional[str]:
         output = updater.get(section, key)
         return str(output.value) if output.value else output.value
 
+    return None
+
 
 # Ini file string converters, to and from NamerConfig type
 
@@ -174,7 +194,7 @@ def from_regex_list(value: Optional[List[Pattern]]) -> str:
 def to_site_abbreviation(site_abbreviations: Optional[str]) -> Dict[Pattern, str]:
     abbreviations_db = database.abbreviations.copy()
     if site_abbreviations:
-        data = json.loads(site_abbreviations)
+        data = orjson.loads(site_abbreviations)
         abbreviations_db.update(data)
 
     new_abbreviation: Dict[Pattern, str] = {}
@@ -187,7 +207,7 @@ def to_site_abbreviation(site_abbreviations: Optional[str]) -> Dict[Pattern, str
 
 def from_site_abbreviation(site_abbreviations: Optional[Dict[Pattern, str]]) -> str:
     out: Dict[str, str] = {x.pattern[1:-6]: y[0:-1] for (x, y) in site_abbreviations.items()} if site_abbreviations else {}
-    res = json.dumps(out)
+    res = orjson.dumps(out).decode('UTF-8')
 
     return res
 
@@ -224,6 +244,9 @@ field_info: Dict[str, Tuple[str, Optional[Callable[[Optional[str]], Any]], Optio
     'porndb_token': ('namer', None, None),
     'name_parser': ('namer', None, None),
     'inplace_name': ('namer', None, None),
+    'inplace_name_scene': ('namer', None, None),
+    'inplace_name_movie': ('namer', None, None),
+    'inplace_name_jav': ('namer', None, None),
     'prefer_dir_name_if_available': ('namer', to_bool, from_bool),
     'min_file_size': ('namer', to_int, from_int),
     'write_namer_log': ('namer', to_bool, from_bool),
@@ -272,6 +295,9 @@ field_info: Dict[str, Tuple[str, Optional[Callable[[Optional[str]], Any]], Optio
     'queue_limit': ('watchdog', to_int, from_int),
     'queue_sleep_time': ('watchdog', to_int, from_int),
     'new_relative_path_name': ('watchdog', None, None),
+    'new_relative_path_name_scene': ('watchdog', None, None),
+    'new_relative_path_name_movie': ('watchdog', None, None),
+    'new_relative_path_name_jav': ('watchdog', None, None),
     'watch_dir': ('watchdog', to_path, from_path),
     'work_dir': ('watchdog', to_path, from_path),
     'failed_dir': ('watchdog', to_path, from_path),
@@ -284,6 +310,8 @@ field_info: Dict[str, Tuple[str, Optional[Callable[[Optional[str]], Any]], Optio
     'allow_delete_files': ('watchdog', to_bool, from_bool),
     'add_columns_from_log': ('watchdog', to_bool, from_bool),
     'add_complete_column': ('watchdog', to_bool, from_bool),
+    'webhook_enabled': ('webhook', to_bool, from_bool),
+    'webhook_url': ('webhook', None, None),
     'debug': ('watchdog', to_bool, from_bool),
     'console_format': ('watchdog', None, None),
     'manual_mode': ('watchdog', to_bool, from_bool),

@@ -1,15 +1,16 @@
 """
 A file watching service to rename movie files and move them
-to relevant locations after match the file against the porndb.
+to relevant locations after match the file against the theporndb.
 """
 
-from contextlib import suppress
 import os
 import shutil
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
+from platform import system
 from queue import Queue
 from threading import Thread
 from typing import Optional
@@ -19,13 +20,43 @@ from loguru import logger
 from watchdog.events import EVENT_TYPE_MODIFIED, EVENT_TYPE_MOVED, FileSystemEvent, PatternMatchingEventHandler
 from watchdog.observers.polling import PollingObserver
 
+from namer.command import Command, gather_target_files_from_dir, is_interesting_movie, make_command_relative_to, move_command_files
 from namer.configuration import NamerConfig
 from namer.configuration_utils import verify_configuration
-from namer.command import gather_target_files_from_dir, is_interesting_movie, make_command_relative_to, move_command_files, Command
 from namer.metadataapi import get_user_info
 from namer.name_formatter import PartialFormatter
 from namer.namer import process_file
 from namer.web.server import NamerWebServer
+
+
+def __is_file_in_use_windows(file: Path):
+    try:
+        file.rename(file)
+    except PermissionError:
+        return True
+    else:
+        return False
+
+
+def __is_file_in_use_unix(file: Path):
+    try:
+        # pylint: disable=consider-using-with
+        buffered_reader = open(file, mode='rb')  # noqa: SIM115
+        buffered_reader.close()
+    except PermissionError:
+        return True
+    else:
+        return False
+
+
+def is_file_in_use(file: Optional[Path]):
+    if not file or not file.exists():
+        return False
+
+    if system() == 'Windows':
+        return __is_file_in_use_windows(file)
+    else:
+        return __is_file_in_use_unix(file)
 
 
 def done_copying(file: Optional[Path]) -> bool:
@@ -36,14 +67,8 @@ def done_copying(file: Optional[Path]) -> bool:
     if not file or not file.exists():
         return False
 
-    while True:
-        try:
-            # pylint: disable=consider-using-with
-            buffered_reader = open(file, mode='rb')  # noqa: SIM115
-            buffered_reader.close()
-            break
-        except PermissionError:
-            time.sleep(0.2)
+    while is_file_in_use(file):
+        time.sleep(2)
 
     return True
 
@@ -103,9 +128,13 @@ class MovieEventHandler(PatternMatchingEventHandler):
             file_path = event.src_path
 
         if file_path:
-            path = Path(file_path)
+            path = Path(file_path).resolve()
+            if not path.is_relative_to(self.__namer_config.watch_dir):
+                logger.error('file should be in watch dir {}', path)
+                return
+
             relative_path = str(path.relative_to(self.__namer_config.watch_dir))
-            if not self.__namer_config.ignored_dir_regex.search(relative_path) and done_copying(path) and is_interesting_movie(path, self.__namer_config):
+            if not self.__namer_config.ignored_dir_regex.search(relative_path) and is_interesting_movie(path, self.__namer_config) and done_copying(path):
                 logger.info('watchdog process called for {}', relative_path)
 
                 # Extra wait time in case other files are copies in as well.
@@ -249,10 +278,14 @@ class MovieWatcher:
         # touch all existing movie files.
         with suppress(FileNotFoundError):
             for file in self.__namer_config.watch_dir.rglob('**/*.*'):
-                if file.is_file() and file.suffix.lower()[1:] in self.__namer_config.target_extensions:
-                    relative_path = str(file.relative_to(self.__namer_config.watch_dir))
-                    if not config.ignored_dir_regex.search(relative_path) and done_copying(file) and is_interesting_movie(file, self.__namer_config):
-                        self.__event_handler.prepare_file_for_processing(file)
+                file = file.resolve()
+                if not file.is_relative_to(self.__namer_config.watch_dir):
+                    logger.error('file should be in watch dir {}', file)
+                    return
+
+                relative_path = str(file.relative_to(self.__namer_config.watch_dir))
+                if not self.__namer_config.ignored_dir_regex.search(relative_path) and is_interesting_movie(file, self.__namer_config) and done_copying(file):
+                    self.__event_handler.prepare_file_for_processing(file)
 
     def stop(self):
         """
@@ -292,6 +325,8 @@ class MovieWatcher:
         if self.__webserver is not None:
             return self.__webserver.get_effective_port()
 
+        return None
+
     def __schedule(self):
         self.__event_observer.schedule(self.__event_handler, str(self.__src_path), recursive=True)
 
@@ -300,9 +335,6 @@ def create_watcher(namer_watchdog_config: NamerConfig) -> MovieWatcher:
     """
     Configure and start a watchdog looking for new Movies.
     """
-    level = 'DEBUG' if namer_watchdog_config.debug else 'INFO'
-    logger.add(sys.stdout, format=namer_watchdog_config.console_format, level=level, diagnose=namer_watchdog_config.diagnose_errors)
-
     logger.info(namer_watchdog_config)
 
     if not verify_configuration(namer_watchdog_config, PartialFormatter()):
@@ -312,7 +344,7 @@ def create_watcher(namer_watchdog_config: NamerConfig) -> MovieWatcher:
     if not user:
         sys.exit(-1)
 
-    logger.info(f'Logged as {user.name} ({user.id})')
+    logger.info('Logged as {name} ({id})'.format(**user))
 
     if namer_watchdog_config.retry_time:
         schedule.every().day.at(namer_watchdog_config.retry_time).do(lambda: retry_failed(namer_watchdog_config))
@@ -320,3 +352,10 @@ def create_watcher(namer_watchdog_config: NamerConfig) -> MovieWatcher:
     movie_watcher = MovieWatcher(namer_watchdog_config)
 
     return movie_watcher
+
+
+def main(config: NamerConfig):
+    level = 'DEBUG' if config.debug else 'INFO'
+    logger.add(sys.stdout, format=config.console_format, level=level, diagnose=config.diagnose_errors)
+
+    create_watcher(config).run()
